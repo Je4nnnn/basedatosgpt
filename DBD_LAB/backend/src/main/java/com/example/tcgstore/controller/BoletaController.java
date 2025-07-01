@@ -3,6 +3,7 @@ package com.example.tcgstore.controller;
 import com.example.tcgstore.model.Boleta;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.example.tcgstore.service.BoletaService;
 
 import java.util.List;
 
