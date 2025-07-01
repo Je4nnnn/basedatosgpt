@@ -1,5 +1,6 @@
 package com.example.tcgstore.service;
 
+import com.example.tcgstore.model.Carrito;
 import com.example.tcgstore.repository.CarritoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,15 +13,15 @@ public class CarritoService {
     @Autowired
     private CarritoRepository carritoRepository;
 
-    public List<BoletaService.Carrito> obtenerTodos() {
+    public List<Carrito> obtenerTodos() {
         return carritoRepository.findAll();
     }
 
-    public BoletaService.Carrito obtenerPorId(Integer id) {
+    public Carrito obtenerPorId(Integer id) {
         return carritoRepository.findById(id).orElse(null);
     }
 
-    public BoletaService.Carrito guardar(BoletaService.Carrito carrito) {
+    public Carrito guardar(Carrito carrito) {
         return carritoRepository.save(carrito);
     }
 
