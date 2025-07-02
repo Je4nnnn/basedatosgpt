@@ -1,0 +1,1259 @@
+MI FRONTEND CONSISTE EN LO SIGUIENTE, EXISTEN VARIAS CARPETAS Y ARCHIVOS, PERO SE DARÁ LA RUTA Y EL NOMBRE DE LOS ARCHIVOS DE LOS CODIGOS QUE MAS SE USARON (O LOS MAS IMPORTANTES)
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\router EXISTE "index.js":
+// frontend/src/router/index.js
+
+import { createRouter, createWebHistory } from 'vue-router'
+
+import Login              from '../views/Login.vue'
+import RegistrarUsuario   from '../views/RegistrarUsuario.vue'
+import Paciente           from '../views/Paciente.vue'
+import Medico             from '../views/Medico.vue'
+import VerMedicos         from '../views/VerMedicos.vue'
+import VerDisponibilidad  from '../views/VerDisponibilidad.vue'
+import AgendarCita        from '../views/AgendarCita.vue'
+import VerCitasPaciente   from '../views/VerCitasPaciente.vue'
+import VerMisCitas        from '../views/VerMisCitas.vue'
+import HistorialMedico    from '../views/HistorialMedico.vue'
+import CancelarCita       from '../views/CancelarCita.vue'
+import ReprogramarCita    from '../views/ReprogramarCita.vue'
+
+const routes = [
+  {
+    path: '/',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/registrar',
+    name: 'RegistrarUsuario',
+    component: RegistrarUsuario
+  },
+  {
+    path: '/paciente',
+    name: 'Paciente',
+    component: Paciente
+  },
+  {
+    path: '/medico',
+    name: 'Medico',
+    component: Medico
+  },
+  {
+    path: '/paciente/medicos',
+    name: 'VerMedicos',
+    component: VerMedicos
+  },
+  {
+    path: '/paciente/disponibilidad/:id',
+    name: 'VerDisponibilidad',
+    component: VerDisponibilidad,
+    props: true
+  },
+  {
+    path: '/paciente/agendar/:id',
+    name: 'AgendarCita',
+    component: AgendarCita,
+    props: true
+  },
+  {
+    path: '/paciente/citas',
+    name: 'VerCitasPaciente',
+    component: VerCitasPaciente
+  },
+  {
+    path: '/paciente/ver-citas',
+    name: 'VerMisCitas',
+    component: VerMisCitas
+  },
+  {
+     path: '/paciente/historial',
+     name: 'HistorialMedico',
+     component: HistorialMedico
+   },
+  {
+    path: '/paciente/cancelar',
+    name: 'CancelarCita',
+    component: CancelarCita
+  },
+  {
+    path: '/paciente/reprogramar',
+    name: 'ReprogramarCita',
+    component: ReprogramarCita
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes
+})
+
+export default router
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\stores EXISTE "counter.js":
+import { ref, computed } from 'vue'
+import { defineStore } from 'pinia'
+
+export const useCounterStore = defineStore('counter', () => {
+  const count = ref(0)
+  const doubleCount = computed(() => count.value * 2)
+  function increment() {
+    count.value++
+  }
+
+  return { count, doubleCount, increment }
+})
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "AboutView.vue":
+<template>
+  <div class="about">
+    <h1>This is an about page</h1>
+  </div>
+</template>
+
+<style>
+@media (min-width: 1024px) {
+  .about {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+  }
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "AgendarCita.vue":
+<template>
+  <div class="agendar-cita">
+    <h1>Agendar Cita Médica</h1>
+    <div>
+      <label for="motivo">Motivo de la consulta:</label>
+      <input
+        id="motivo"
+        v-model="motivo"
+        type="text"
+        placeholder="Ingrese el motivo de la consulta"
+      />
+    </div>
+    <button @click="agendarCita">Confirmar Cita</button>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+
+const medicoId  = ref(route.params.id || route.query.medicoId || '')
+const fechaHora = ref(route.query.fechaHoraInicio || '')
+// **aquí pre-llenamos el motivo si viene en query**
+const motivo     = ref(route.query.motivo || '')
+
+const agendarCita = async () => {
+  try {
+    const email = localStorage.getItem('usuarioEmail')
+    if (!email) throw new Error('Usuario no autenticado')
+
+    await axios.post(
+      `http://localhost:8081/api/paciente/citas?email=${encodeURIComponent(email)}`,
+      {
+        medicoId: Number(medicoId.value),
+        fechaHoraInicio: fechaHora.value,
+        motivo: motivo.value
+      }
+    )
+
+    alert('Cita agendada exitosamente')
+    router.push('/paciente/ver-citas')
+  } catch (error) {
+    console.error(error)
+    const msg = error.response?.data?.error || error.message
+    alert('Error al agendar la cita:\n' + msg)
+  }
+}
+</script>
+
+<style scoped>
+.agendar-cita {
+  max-width: 400px;
+  margin: 2rem auto;
+}
+.agendar-cita input {
+  width: 100%;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+}
+.agendar-cita button {
+  padding: 0.5rem 1rem;
+}
+</style>
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "AgendarCitaView.vue":
+<template>
+  <div class="agendar-cita">
+    <h1>Agendar Cita</h1>
+    <div>
+      <label for="motivo">Motivo de la consulta:</label>
+      <input
+        id="motivo"
+        v-model="motivo"
+        type="text"
+        placeholder="Ingrese el motivo de la consulta"
+      />
+    </div>
+    <button @click="agendarCita">Confirmar Cita</button>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+
+// Tomamos médico y fecha desde query params
+const medicoId   = ref(route.query.medicoId || '')
+const fechaHora  = ref(route.query.fechaHoraInicio || '')
+const motivo     = ref('')
+
+const agendarCita = async () => {
+  try {
+    // Recuperamos el email del paciente guardado en localStorage
+    const email = localStorage.getItem('usuarioEmail')
+    if (!email) throw new Error('Usuario no autenticado')
+
+    // Llamamos al backend correcto (puerto 8081) y enviamos JSON
+    await axios.post(
+      `http://localhost:8081/api/paciente/citas?email=${encodeURIComponent(email)}`,
+      {
+        medicoId: Number(medicoId.value),
+        fechaHoraInicio: fechaHora.value,
+        motivo: motivo.value
+      }
+    )
+
+    alert('Cita agendada exitosamente')
+    router.push('/paciente/ver-citas')
+  } catch (error) {
+    console.error(error)
+    const msg = error.response?.data?.error || error.message
+    alert('Error al agendar la cita:\n' + msg)
+  }
+}
+</script>
+
+<style scoped>
+.agendar-cita {
+  max-width: 400px;
+  margin: 2rem auto;
+}
+.agendar-cita input {
+  width: 100%;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+}
+.agendar-cita button {
+  padding: 0.5rem 1rem;
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "CancelarCita.vue":
+<template>
+  <div class="cancelar-cita">
+    <h1>Cancelar Cita</h1>
+    <div v-if="loading">Cargando citas…</div>
+    <div v-else-if="error" class="error">{{ error }}</div>
+
+    <ul v-else>
+      <li v-for="c in citas" :key="c.id">
+        <strong>ID:</strong> {{ c.id }}
+        – {{ formatDateTime(c.fechaHora) }}
+        con {{ c.medico.nombre }}
+        <button @click="cancelar(c)">Cancelar</button>
+
+      </li>
+    </ul>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+const citas = ref([])
+const loading = ref(true)
+const error = ref(null)
+const router = useRouter()
+
+function formatDateTime(dt) {
+  return new Date(dt).toLocaleString()
+}
+
+async function fetchCitas() {
+  loading.value = true
+  error.value = null
+  try {
+    const email = localStorage.getItem('usuarioEmail')
+    const resp = await axios.get(
+      `http://localhost:8081/api/paciente/citas?email=${encodeURIComponent(email)}`
+    )
+    citas.value = resp.data
+  } catch (e) {
+    error.value = e.response?.data?.error || e.message
+  } finally {
+    loading.value = false
+  }
+}
+
+async function cancelar(cita) {
+  try {
+    const email = localStorage.getItem('usuarioEmail')
+    await axios.delete(
+      `http://localhost:8081/api/paciente/citas/${cita.id}?email=${encodeURIComponent(email)}`
+    )
+    alert('Cita cancelada correctamente')
+
+    // Redirige a la disponibilidad de ese médico
+    router.push({
+      name: 'VerDisponibilidad',
+      params: { id: cita.medico.id },
+      query: { fechaHoraInicio: cita.fechaHora }
+    })
+  } catch (e) {
+    alert('Error al cancelar: ' + (e.response?.data?.error || e.message))
+  }
+}
+
+function reprogramar(cita) {
+  // Igual que cancelar, pero redirige directamente a agendar
+  router.push({
+    name: 'AgendarCita',
+    params: { id: cita.medico.id },
+    query: { fechaHoraInicio: cita.fechaHora }
+  })
+}
+
+onMounted(fetchCitas)
+</script>
+
+<style scoped>
+.error { color: red; }
+.cancelar-cita { max-width: 600px; margin: 2rem auto; }
+ul { list-style: none; padding: 0; }
+li { margin-bottom: 1rem; }
+button { margin-left: 0.5rem; }
+</style>
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "ConsultarHistorialView.vue":
+<template>
+  <div class="p-6">
+    <h1 class="text-3xl font-bold mb-6">Mi Historial Médico</h1>
+
+    <div v-if="historial.length === 0" class="text-gray-600">
+      No tienes historial médico registrado.
+    </div>
+
+    <div v-else class="space-y-4">
+      <div v-for="registro in historial" :key="registro.id" class="border p-4 rounded-lg shadow">
+        <p><strong>Diagnóstico:</strong> {{ registro.diagnostico }}</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+
+const historial = ref([]);
+
+const fetchHistorial = async () => {
+  try {
+    const pacienteId = localStorage.getItem('userId');
+    const response = await axios.get(`http://localhost:8081/historial/paciente/${pacienteId}`);
+    historial.value = response.data;
+  } catch (error) {
+    console.error('Error al obtener el historial médico:', error);
+  }
+};
+
+onMounted(fetchHistorial);
+</script>
+
+<style scoped>
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "HistorialMedico.vue":
+<template>
+  <div class="container">
+    <h2>Historial Médico</h2>
+    <ul v-if="historial.length">
+      <li v-for="entrada in historial" :key="entrada.id">
+        <strong>Diagnóstico:</strong> {{ entrada.diagnostico }}
+      </li>
+    </ul>
+    <p v-else>No hay historial médico registrado.</p>
+  </div>
+</template>
+
+<script>
+import axios from 'axios'
+
+export default {
+  data() {
+    return {
+      historial: [],
+    }
+  },
+  async created() {
+    const pacienteId = localStorage.getItem('usuarioId')
+
+    try {
+      const res = await axios.get(`http://localhost:8081/api/paciente/historial?pacienteId=${pacienteId}`)
+      this.historial = res.data
+    } catch (error) {
+      console.error('Error al obtener historial médico:', error)
+    }
+  }
+}
+</script>
+
+<style scoped>
+.container {
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
+}
+li {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "HistorialPaciente.vue":
+<template>
+  <div>
+    <h1>Mi Historial Médico</h1>
+    <ul>
+      <li v-for="registro in historial" :key="registro.id">
+        {{ registro.diagnostico }}
+      </li>
+    </ul>
+  </div>
+</template>
+
+<script>
+import axios from 'axios';
+
+export default {
+  name: 'HistorialPaciente',
+  data() {
+    return {
+      historial: []
+    }
+  },
+  mounted() {
+    this.obtenerHistorial();
+  },
+  methods: {
+    async obtenerHistorial() {
+      const pacienteId = localStorage.getItem('idUsuario');
+      if (!pacienteId) {
+        alert('No se encontró el ID del paciente');
+        return;
+      }
+
+      try {
+        const response = await axios.get(`http://localhost:8081/api/paciente/historial/${pacienteId}`);
+        this.historial = response.data;
+      } catch (error) {
+        console.error(error);
+        alert('Error al obtener historial médico.');
+      }
+    }
+  }
+}
+</script>
+
+<style scoped>
+h1 {
+  text-align: center;
+  margin-top: 30px;
+}
+ul {
+  list-style: none;
+  padding: 0;
+}
+li {
+  margin: 10px 0;
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "HomeView.vue":
+<script setup>
+import TheWelcome from '../components/TheWelcome.vue'
+</script>
+
+<template>
+  <main>
+    <TheWelcome />
+  </main>
+</template>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "Login.vue":
+<template>
+  <div class="login-container">
+    <h1>Iniciar Sesión</h1>
+    <form @submit.prevent="login">
+      <div class="field">
+        <label for="email">Email:</label>
+        <input id="email" v-model="email" type="email" required />
+      </div>
+      <div class="field">
+        <label for="password">Contraseña:</label>
+        <input id="password" v-model="password" type="password" required />
+      </div>
+      <button type="submit">Ingresar</button>
+    </form>
+
+    <!-- Enlace a la pantalla de registro -->
+    <p style="margin-top: 1em; text-align: center;">
+      ¿No tienes cuenta?
+      <router-link to="/registrar">Regístrate aquí</router-link>
+    </p>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+const email = ref('')
+const password = ref('')
+const router = useRouter()
+
+const login = async () => {
+  try {
+    console.log('Intentando login con:', email.value)
+    const resp = await axios.post(
+      'http://localhost:8081/api/auth/login',
+      { email: email.value, password: password.value }
+    )
+    const user = resp.data
+    console.log('Login OK, recibí usuario:', user)
+
+    // Guardamos los datos clave en localStorage
+    localStorage.setItem('usuarioEmail', user.email)
+    localStorage.setItem('usuarioId',    String(user.id))
+    localStorage.setItem('usuarioRol',   user.rol)
+    console.log(
+      'LocalStorage poblado:',
+      localStorage.getItem('usuarioEmail'),
+      localStorage.getItem('usuarioId'),
+      localStorage.getItem('usuarioRol')
+    )
+
+    // Redirigimos a la pantalla de paciente
+    router.push('/paciente')
+  } catch (err) {
+    console.error('Error en login:', err)
+    alert('Credenciales inválidas, inténtalo de nuevo.')
+  }
+}
+</script>
+
+<style scoped>
+.login-container {
+  max-width: 400px;
+  margin: 4rem auto;
+  padding: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: white;
+}
+.field {
+  margin-bottom: 1rem;
+}
+.field label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.field input {
+  width: 100%;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:hover {
+  background: #0056b3;
+}
+</style>
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "Medico.vue":
+<template>
+  <div class="medico-container">
+    <h1>Bienvenido, Médico</h1>
+    <p>Aquí podrás ver tus citas asignadas, registrar recetas y actualizar historial médico.</p>
+  </div>
+</template>
+
+<script setup>
+</script>
+
+<style scoped>
+.medico-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-top: 100px;
+  text-align: center;
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "MisCitas.vue":
+<template>
+  <div>
+    <h1>Mis Citas Médicas</h1>
+    <ul>
+      <li v-for="cita in citas" :key="cita.id">
+        {{ cita.fechaHora }} - {{ cita.motivo }} (Estado: {{ cita.estado }})
+      </li>
+    </ul>
+  </div>
+</template>
+
+<script>
+import axios from 'axios';
+
+export default {
+  name: 'MisCitas',
+  data() {
+    return {
+      citas: []
+    }
+  },
+  mounted() {
+    this.obtenerCitas();
+  },
+  methods: {
+    async obtenerCitas() {
+      const pacienteId = localStorage.getItem('idUsuario');
+      if (!pacienteId) {
+        alert('No se encontró el ID del paciente');
+        return;
+      }
+
+      try {
+        const response = await axios.get(`http://localhost:8081/api/paciente/citas/${pacienteId}`);
+        this.citas = response.data;
+      } catch (error) {
+        console.error(error);
+        alert('Error al obtener citas.');
+      }
+    }
+  }
+}
+</script>
+
+<style scoped>
+h1 {
+  text-align: center;
+  margin-top: 30px;
+}
+ul {
+  list-style: none;
+  padding: 0;
+}
+li {
+  margin: 10px 0;
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "Paciente.vue":
+<template>
+  <div class="paciente-home">
+    <h1>Bienvenido, Paciente</h1>
+    <div class="buttons">
+      <button @click="router.push({ name: 'VerMedicos' })">
+        Agendar Cita
+      </button>
+      <button @click="router.push({ name: 'VerMisCitas' })">
+        Ver Mis Citas
+      </button>
+      <button @click="router.push({ name: 'CancelarCita' })">
+        Cancelar Cita
+      </button>
+      <button @click="router.push({ name: 'HistorialMedico' })">
+        Consultar Historial Médico
+      </button>
+      <button @click="router.push({ name: 'ReprogramarCita' })">
+        Reprogramar Cita
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { useRouter } from 'vue-router'
+const router = useRouter()
+</script>
+
+<style scoped>
+.paciente-home {
+  max-width: 400px;
+  margin: 2rem auto;
+  text-align: center;
+}
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+button {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f9f9f9;
+}
+button:hover {
+  background: #e9e9e9;
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "RegistrarUsuario.vue":
+<template>
+  <div class="registrar-container">
+    <h1>Registrar Usuario</h1>
+    <form @submit.prevent="registrar">
+      <div class="field">
+        <label for="nombre">Nombre:</label>
+        <input id="nombre" v-model="nombre" type="text" required />
+      </div>
+      <div class="field">
+        <label for="email">Email:</label>
+        <input id="email" v-model="email" type="email" required />
+      </div>
+      <div class="field">
+        <label for="password">Contraseña:</label>
+        <input id="password" v-model="password" type="password" required />
+      </div>
+      <div class="field">
+        <label for="rol">Rol:</label>
+        <select id="rol" v-model="rol">
+          <option value="PACIENTE">Paciente</option>
+          <option value="MEDICO">Médico</option>
+          <option value="ADMINISTRATIVO">Administrativo</option>
+          <option value="INVENTARIO">Inventario</option>
+        </select>
+      </div>
+      <button type="submit">Registrar</button>
+    </form>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+const nombre   = ref('')
+const email    = ref('')
+const password = ref('')
+const rol      = ref('PACIENTE')
+const router   = useRouter()
+
+const registrar = async () => {
+  try {
+    await axios.post('http://localhost:8081/api/usuarios', {
+      nombre:   nombre.value,
+      email:    email.value,
+      password: password.value,
+      rol:      rol.value
+    })
+    alert('Usuario registrado correctamente')
+    router.push('/')
+  } catch (e) {
+    alert('Error al registrar usuario: ' + (e.response?.data?.error || e.message))
+  }
+}
+</script>
+
+<style scoped>
+.registrar-container {
+  max-width: 400px;
+  margin: 2rem auto;
+}
+.field {
+  margin-bottom: 1rem;
+}
+label {
+  display: block;
+  margin-bottom: .5rem;
+}
+input, select {
+  width: 100%;
+  padding: .5rem;
+  box-sizing: border-box;
+}
+button {
+  width: 100%;
+  padding: .75rem;
+  background-color: #007b00;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+button:hover {
+  background-color: #005900;
+}
+</style>
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "ReprogramarCita.vue":
+<template>
+  <div class="reprogramar-cita">
+    <h1>Reprogramar Cita</h1>
+
+    <div v-if="loading">Cargando citas…</div>
+    <div v-else-if="error" class="error">{{ error }}</div>
+
+    <ul v-else>
+      <li v-for="c in citas" :key="c.id" style="margin-bottom: 1rem;">
+        <strong>ID:</strong> {{ c.id }}
+        – {{ formatDateTime(c.fechaHora) }}
+        con {{ c.medico.nombre }}
+        <button @click="reprogramar(c)" style="margin-left: 1rem;">
+          Reprogramar
+        </button>
+      </li>
+    </ul>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+const citas   = ref([])
+const loading = ref(true)
+const error   = ref(null)
+const router  = useRouter()
+
+function formatDateTime(dt) {
+  return new Date(dt).toLocaleString()
+}
+
+async function fetchCitas() {
+  loading.value = true
+  error.value   = null
+  try {
+    const email = localStorage.getItem('usuarioEmail')
+    const resp  = await axios.get(
+      `http://localhost:8081/api/paciente/citas?email=${encodeURIComponent(email)}`
+    )
+    citas.value = resp.data
+  } catch (e) {
+    error.value = e.response?.data?.error || e.message
+  } finally {
+    loading.value = false
+  }
+}
+
+async function reprogramar(cita) {
+  try {
+    const email = localStorage.getItem('usuarioEmail')
+
+    // 1) Cancelamos la cita actual
+    await axios.delete(
+      `http://localhost:8081/api/paciente/citas/${cita.id}`,
+      { params: { email } }
+    )
+
+    // 2) Redirigimos a la lista de disponibilidad para este médico
+    router.push({
+      name: 'VerDisponibilidad',
+      params: { id: cita.medico.id },
+      query: {
+        reprogramar: 'true',
+        citaId:      cita.id,
+        motivo:      cita.motivo
+      }
+    })
+  } catch (e) {
+    console.error(e)
+    alert('Error al reprogramar: ' + (e.response?.data?.error || e.message))
+  }
+}
+
+onMounted(fetchCitas)
+</script>
+
+<style scoped>
+.error { color: red; }
+.reprogramar-cita {
+  max-width: 600px;
+  margin: 2rem auto;
+}
+ul { list-style: none; padding: 0; }
+li { display: flex; align-items: center; }
+button { margin-left: 0.5rem; }
+</style>
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "VerCitasPaciente.vue":
+<template>
+  <div class="container">
+    <h2>Tus citas médicas</h2>
+    <ul v-if="citas.length">
+      <li v-for="cita in citas" :key="cita.id">
+        <strong>Fecha:</strong> {{ formatDate(cita.fechaHora) }}<br />
+        <strong>Motivo:</strong> {{ cita.motivo }}<br />
+        <strong>Médico:</strong> {{ cita.medico.nombre }}<br />
+        <strong>Estado:</strong> {{ cita.estado }}
+      </li>
+    </ul>
+    <p v-else>No tienes citas agendadas.</p>
+  </div>
+</template>
+
+<script>
+import axios from 'axios'
+
+export default {
+  data() {
+    return {
+      citas: [],
+    }
+  },
+  async created() {
+    const pacienteId = localStorage.getItem('usuarioId')
+
+    try {
+      const res = await axios.get(`http://localhost:8081/api/paciente/citas?pacienteId=${pacienteId}`)
+      this.citas = res.data
+    } catch (error) {
+      console.error('Error al obtener citas médicas:', error)
+    }
+  },
+  methods: {
+    formatDate(fecha) {
+      return new Date(fecha).toLocaleString()
+    }
+  }
+}
+</script>
+
+<style scoped>
+.container {
+  max-width: 700px;
+  margin: auto;
+  padding: 20px;
+}
+li {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "VerDisponibilidad.vue":
+<!-- frontend/src/views/VerDisponibilidad.vue -->
+<template>
+  <div class="container">
+    <h2>Disponibilidad de {{ nombreMedico }}</h2>
+
+    <ul v-if="disponibilidades.length">
+      <li v-for="disp in disponibilidades" :key="disp.id">
+        <!-- usamos los campos exactos del modelo JPA -->
+        {{ formatDate(disp.fechaHoraInicio) }}
+        a
+        {{ formatDate(disp.fechaHoraFin) }}
+        <button @click="irAgendar(disp)">Agendar</button>
+      </li>
+    </ul>
+
+    <p v-else>No hay disponibilidad registrada.</p>
+  </div>
+</template>
+
+<script>
+import axios from 'axios';
+
+export default {
+  name: 'VerDisponibilidad',
+  data() {
+    return {
+      disponibilidades: [],
+      nombreMedico: ''
+    };
+  },
+  async created() {
+    const medicoId = this.$route.params.id;
+    // si pasas el nombre en query param al navegar desde VerMedicos.vue
+    this.nombreMedico = decodeURIComponent(this.$route.query.nombre || '');
+
+    try {
+      const res = await axios.get(
+        `http://localhost:8081/api/paciente/disponibilidad?medicoId=${medicoId}`
+      );
+      this.disponibilidades = res.data;
+    } catch (error) {
+      console.error('Error al obtener disponibilidad', error);
+    }
+  },
+  methods: {
+    formatDate(fecha) {
+      // aquí Vue recibe un ISO string que Spring Boot serializa
+      return new Date(fecha).toLocaleString();
+    },
+    irAgendar(disp) {
+      const medicoId = this.$route.params.id;
+      this.$router.push({
+        path: `/paciente/agendar/${medicoId}`,
+        query: {
+          nombre: encodeURIComponent(this.nombreMedico),
+          // usa exacto fechaHoraInicio
+          fechaHoraInicio: disp.fechaHoraInicio
+        }
+      });
+    }
+  }
+};
+</script>
+
+<style scoped>
+.container {
+  max-width: 600px;
+  margin: auto;
+  padding-top: 40px;
+}
+ul { list-style: none; padding: 0; }
+li { margin-bottom: 1rem; }
+button {
+  margin-left: 1rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+}
+</style>
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "VerMedicos.vue":
+<template>
+  <div style="padding: 2rem;">
+    <h1 style="text-align: center; margin-bottom: 2rem;">Médicos Disponibles</h1>
+    <div
+      v-for="medico in medicos"
+      :key="medico.id"
+      class="medico-card"
+    >
+      <h2>{{ medico.nombre }}</h2>
+      <p>{{ medico.email }}</p>
+      <button @click="verDisponibilidad(medico.id)">Ver disponibilidad</button>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "VerMedicos",
+  data() {
+    return {
+      medicos: [],
+    };
+  },
+  mounted() {
+    fetch("http://localhost:8081/api/usuarios")
+      .then(res => res.json())
+      .then(data => {
+        const filtrados = data.filter(
+          (usuario, index, self) =>
+            usuario.rol === "MEDICO" &&
+            index === self.findIndex(u => u.email === usuario.email)
+        );
+        this.medicos = filtrados;
+      })
+      .catch(err => console.error("Error cargando médicos:", err));
+  },
+  methods: {
+    verDisponibilidad(medicoId) {
+      this.$router.push(`/paciente/disponibilidad/${medicoId}`);
+    },
+  },
+};
+</script>
+
+<style scoped>
+.medico-card {
+  background-color: #f5f5f5;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+}
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src\views EXISTE "VerMisCitas.vue":
+<template>
+  <div class="mis-citas">
+    <h1>Mis Citas Agendadas</h1>
+
+    <div v-if="loading">Cargando citas…</div>
+    <div v-else-if="error" class="error">{{ error }}</div>
+
+    <table v-else>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Médico</th>
+          <th>Fecha & Hora</th>
+          <th>Motivo</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="c in citas" :key="c.id">
+          <td>{{ c.id }}</td>
+          <td>{{ c.medico.nombre }} ({{ c.medico.email }})</td>
+          <td>{{ formatDateTime(c.fechaHora) }}</td>
+          <td>{{ c.motivo }}</td>
+          <td>{{ c.estado }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div v-if="citas.length === 0 && !loading">
+      No tienes citas agendadas.
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const citas = ref([])
+const loading = ref(true)
+const error = ref(null)
+
+function formatDateTime(dt) {
+  // Opcional: formatea ISO a algo legible
+  return new Date(dt).toLocaleString()
+}
+
+async function fetchCitas() {
+  loading.value = true
+  error.value = null
+
+  try {
+    const email = localStorage.getItem('usuarioEmail')
+    if (!email) throw new Error('No estás autenticado')
+    const resp = await axios.get(
+      `http://localhost:8081/api/paciente/citas?email=${encodeURIComponent(email)}`
+    )
+    citas.value = resp.data
+  } catch (e) {
+    console.error(e)
+    error.value = e.response?.data?.error || e.message
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchCitas)
+</script>
+
+<style scoped>
+.mis-citas {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  text-align: left;
+}
+.error {
+  color: red;
+  margin-top: 1rem;
+}
+</style>
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src EXISTE "App.vue":
+<template>
+  <router-view />
+</template>
+
+<script setup>
+</script>
+
+<style scoped>
+/* Puedes dejarlo vacío por ahora */
+</style>
+
+
+EN C:\Users\Admin\Desktop\FINGESO\frontend\frontend\src EXISTE "main.js":
+import { createApp } from 'vue'
+import App from './App.vue'
+import router from './router'
+
+const app = createApp(App)
+
+app.use(router)
+
+app.mount('#app')
+
+
+ESTOS SON TODOS LOS CODIGOS IMPORTANTES DE MI PAGINA, TAMBIEN EXISTEN CARPETAS LLAMADAS ".vscode", "node_modules", "public" y archivos como ".gitignore", "index.html", "jsconfig.json", "package.json", "package-lock.json", "README.md", "vite.config.js" y "package-lock.json"

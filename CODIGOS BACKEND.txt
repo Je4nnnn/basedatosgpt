@@ -1,0 +1,2012 @@
+MI BACKEND CONSISTE EN LO SIGUIENTE, SE DARÁ LA RUTA Y EL NOMBRE DE LA CLASE O INTERFAZ ESCRITA EN JAVA
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\.mvn\wrapper EXISTE "maven-wrapper.properties": 
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+wrapperVersion=3.3.2
+distributionType=only-script
+distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\config EXISTE "CorsConfig":
+
+package com.example.backend.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class CorsConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("http://localhost:5173")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
+            }
+        };
+    }
+}
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\controller EXISTE "AuthController":
+// backend/src/main/java/com/example/backend/controller/AuthController.java
+package com.example.backend.controller;
+
+import com.example.backend.dto.LoginRequest;
+import com.example.backend.model.Usuario;
+import com.example.backend.service.AuthService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    @Autowired
+    private AuthService authService;
+
+    /**
+     * Autentica un usuario y devuelve su ID, email y rol.
+     */
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest loginRequest) {
+        Optional<Usuario> usuarioOptional =
+                authService.autenticarUsuario(loginRequest.getEmail(), loginRequest.getPassword());
+
+        Map<String, String> respuesta = new HashMap<>();
+
+        if (usuarioOptional.isPresent()) {
+            Usuario usuario = usuarioOptional.get();
+            respuesta.put("mensaje", "Login exitoso");
+            // Añadimos id y email al mapa de respuesta:
+            respuesta.put("id", usuario.getId().toString());
+            respuesta.put("email", usuario.getEmail());
+            respuesta.put("rol", usuario.getRol());
+            return ResponseEntity.ok(respuesta);
+        } else {
+            respuesta.put("mensaje", "Email o contraseña incorrectos");
+            return ResponseEntity.status(401).body(respuesta);
+        }
+    }
+}
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\controller EXISTE "CitaMedicaController":
+package com.example.backend.controller;
+
+import com.example.backend.model.CitaMedica;
+import com.example.backend.service.CitaMedicaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/citas")
+public class CitaMedicaController {
+
+    @Autowired
+    private CitaMedicaService citaMedicaService;
+
+    // Agendar una nueva cita
+    @PostMapping
+    public ResponseEntity<CitaMedica> agendarCita(@RequestBody CitaMedica citaMedica) {
+        CitaMedica nuevaCita = citaMedicaService.agendarCita(citaMedica);
+        return ResponseEntity.ok(nuevaCita);
+    }
+
+    // Listar todas las citas
+    @GetMapping
+    public ResponseEntity<List<CitaMedica>> listarCitas() {
+        return ResponseEntity.ok(citaMedicaService.listarCitas());
+    }
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\controller EXISTE "MedicamentoController":
+package com.example.backend.controller;
+
+import com.example.backend.dto.RegistrarMedicamentoDTO;
+import com.example.backend.model.Medicamento;
+import com.example.backend.model.StockMedicamento;
+import com.example.backend.service.MedicamentoService;
+import com.example.backend.service.StockMedicamentoService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/medicamentos")
+public class MedicamentoController {
+
+    @Autowired private MedicamentoService medicamentoService;
+    @Autowired private StockMedicamentoService stockService;
+
+    /** 1) Crear sólo Medicamento **/
+    @PostMapping
+    public ResponseEntity<Medicamento> crearMedicamento(@Valid @RequestBody Medicamento med) {
+        Medicamento guardado = medicamentoService.registrarMedicamento(med);
+        return ResponseEntity.ok(guardado);
+    }
+
+    /** 2) Crear Medicamento + Stock en una sola llamada **/
+    @Transactional
+    @PostMapping("/con-stock")
+    public ResponseEntity<Map<String, Object>> crearConStock(
+            @Valid @RequestBody RegistrarMedicamentoDTO dto
+    ) {
+        // 2.1) creo el medicamento
+        Medicamento med = new Medicamento();
+        med.setNombre(dto.getNombre());
+        med.setDescripcion(dto.getDescripcion());
+        med = medicamentoService.registrarMedicamento(med);
+
+        // 2.2) creo / actualizo stock
+        StockMedicamento stk = new StockMedicamento();
+        stk.setMedicamento(med);
+        stk.setCantidadDisponible(dto.getCantidadDisponible());
+        stk = stockService.actualizarStock(stk);
+
+        // 2.3) devuelvo ambos en un Map
+        return ResponseEntity.ok(Map.of(
+                "medicamento", med,
+                "stock", stk
+        ));
+    }
+
+    /** 3) Listar todo **/
+    @GetMapping
+    public ResponseEntity<?> listar() {
+        return ResponseEntity.ok(medicamentoService.listarMedicamentos());
+    }
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\controller EXISTE "MedicoController":
+package com.example.backend.controller;
+
+import com.example.backend.dto.RecetaMedicaDTO;
+import com.example.backend.dto.RegistrarHistorialDTO;
+import com.example.backend.dto.HistorialMedicoDTO;
+import com.example.backend.model.CitaMedica;
+import com.example.backend.model.HistorialMedico;
+import com.example.backend.model.RecetaMedica;
+import com.example.backend.model.Usuario;
+import com.example.backend.service.AuthService;
+import com.example.backend.service.CitaMedicaService;
+import com.example.backend.service.DisponibilidadMedicoService;
+import com.example.backend.service.HistorialMedicoService;
+import com.example.backend.service.RecetaMedicaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/medico")
+public class MedicoController {
+
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private DisponibilidadMedicoService disponibilidadMedicoService;
+
+    @Autowired
+    private CitaMedicaService citaMedicaService;
+
+    @Autowired
+    private RecetaMedicaService recetaMedicaService;
+
+    @Autowired
+    private HistorialMedicoService historialMedicoService;
+
+    @GetMapping("/citas")
+    public ResponseEntity<?> verCitasAsignadas(@RequestParam String email) {
+        Optional<Usuario> usuarioOpt = authService.buscarUsuarioPorEmail(email);
+
+        if (usuarioOpt.isEmpty() || !usuarioOpt.get().getRol().equals("MEDICO")) {
+            return ResponseEntity.status(403).body("Acceso denegado: Solo MÉDICOS pueden ver sus citas.");
+        }
+
+        Usuario medico = usuarioOpt.get();
+        List<CitaMedica> citasAsignadas = citaMedicaService.listarCitasPorMedico(medico.getId());
+
+        return ResponseEntity.ok(citasAsignadas);
+    }
+
+    @PostMapping("/recetas")
+    public ResponseEntity<?> registrarReceta(@RequestParam String email, @RequestBody RecetaMedicaDTO recetaMedicaDTO) {
+        Optional<Usuario> usuarioOpt = authService.buscarUsuarioPorEmail(email);
+
+        if (usuarioOpt.isEmpty() || !usuarioOpt.get().getRol().equals("MEDICO")) {
+            return ResponseEntity.status(403).body("Acceso denegado: Solo MÉDICOS pueden registrar recetas.");
+        }
+
+        Usuario medico = usuarioOpt.get();
+        RecetaMedica nuevaReceta = recetaMedicaService.registrarReceta(recetaMedicaDTO, medico.getId());
+
+        return ResponseEntity.ok(nuevaReceta);
+    }
+
+    @PostMapping("/historial")
+    public ResponseEntity<?> registrarHistorial(@RequestBody RegistrarHistorialDTO registrarHistorialDTO) {
+        Optional<Usuario> usuarioOpt = authService.buscarUsuarioPorEmail(registrarHistorialDTO.getEmailMedico());
+
+        if (usuarioOpt.isEmpty() || !usuarioOpt.get().getRol().equals("MEDICO")) {
+            return ResponseEntity.status(403).body("Acceso denegado: Solo MÉDICOS pueden registrar historial médico.");
+        }
+
+        HistorialMedico historialGuardado = historialMedicoService.registrarHistorial(
+                new HistorialMedicoDTO(registrarHistorialDTO.getDiagnostico(), registrarHistorialDTO.getPacienteId())
+        );
+
+        return ResponseEntity.ok(historialGuardado);
+    }
+
+    // 🔵 Nuevo: Finalizar una cita médica
+    @PutMapping("/finalizar-cita")
+    public ResponseEntity<?> finalizarCita(@RequestParam String email, @RequestParam Long citaId) {
+        Optional<Usuario> usuarioOpt = authService.buscarUsuarioPorEmail(email);
+
+        if (usuarioOpt.isEmpty() || !usuarioOpt.get().getRol().equals("MEDICO")) {
+            return ResponseEntity.status(403).body("Acceso denegado: Solo MÉDICOS pueden finalizar citas.");
+        }
+
+        Usuario medico = usuarioOpt.get();
+
+        boolean finalizada = citaMedicaService.finalizarCita(citaId, medico.getId());
+
+        if (finalizada) {
+            return ResponseEntity.ok("Consulta finalizada exitosamente.");
+        } else {
+            return ResponseEntity.status(404).body("No se pudo finalizar la cita.");
+        }
+    }
+}
+
+
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\controller EXISTE "PacienteController":
+package com.example.backend.controller;
+
+import com.example.backend.dto.AgendarCitaRequest;
+import com.example.backend.model.CitaMedica;
+import com.example.backend.model.DisponibilidadMedico;
+import com.example.backend.model.Usuario;
+import com.example.backend.service.AuthService;
+import com.example.backend.service.CitaMedicaService;
+import com.example.backend.service.DisponibilidadMedicoService;
+import com.example.backend.service.HistorialMedicoService;
+import com.example.backend.service.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.DateTimeException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/paciente")
+public class PacienteController {
+
+    @Autowired private CitaMedicaService citaMedicaService;
+    @Autowired private HistorialMedicoService historialMedicoService;
+    @Autowired private UsuarioService usuarioService;
+    @Autowired private AuthService authService;
+    @Autowired private DisponibilidadMedicoService disponibilidadMedicoService;
+
+    private final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+    // 1) Agendar cita (query + path)
+    @PostMapping("/agendar/{medicoId}")
+    public ResponseEntity<?> agendarCitaPorQuery(
+            @PathVariable Long medicoId,
+            @RequestParam("nombre") String email,
+            @RequestParam("fechaHoraInicio") String fechaHoraInicio,
+            @RequestParam("motivo") String motivo
+    ) {
+        Optional<Usuario> u = authService.buscarUsuarioPorEmail(email);
+        if (u.isEmpty() || !"PACIENTE".equals(u.get().getRol())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Acceso denegado: Solo PACIENTES pueden agendar citas.");
+        }
+
+        Usuario medico = usuarioService.buscarUsuarioPorId(medicoId)
+                .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
+
+        LocalDateTime dt;
+        try {
+            dt = LocalDateTime.parse(fechaHoraInicio, ISO);
+        } catch (DateTimeException ex) {
+            return ResponseEntity.badRequest()
+                    .body("Formato de fecha inválido. Use ISO_LOCAL_DATE_TIME");
+        }
+
+        CitaMedica cita = new CitaMedica();
+        cita.setPaciente(u.get());
+        cita.setMedico(medico);
+        cita.setFechaHora(dt);
+        cita.setMotivo(motivo);
+        cita.setEstado("AGENDADA");
+
+        CitaMedica guardada = citaMedicaService.agendarCita(cita);
+        return ResponseEntity.ok(guardada);
+    }
+
+    // 2) Agendar cita (JSON + email)
+    @PostMapping("/citas")
+    public ResponseEntity<?> agendarCitaPorBody(
+            @RequestParam("email") String email,
+            @RequestBody AgendarCitaRequest req
+    ) {
+        Optional<Usuario> u = authService.buscarUsuarioPorEmail(email);
+        if (u.isEmpty() || !"PACIENTE".equals(u.get().getRol())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Acceso denegado: Solo PACIENTES pueden agendar citas.");
+        }
+
+        Usuario medico = usuarioService.buscarUsuarioPorId(req.getMedicoId())
+                .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
+
+        LocalDateTime dt;
+        try {
+            dt = LocalDateTime.parse(req.getFechaHoraInicio(), ISO);
+        } catch (DateTimeException ex) {
+            return ResponseEntity.badRequest()
+                    .body("Formato de fecha inválido. Use ISO_LOCAL_DATE_TIME");
+        }
+
+        CitaMedica cita = new CitaMedica();
+        cita.setPaciente(u.get());
+        cita.setMedico(medico);
+        cita.setFechaHora(dt);
+        cita.setMotivo(req.getMotivo());
+        cita.setEstado("AGENDADA");
+
+        CitaMedica guardada = citaMedicaService.agendarCita(cita);
+        return ResponseEntity.ok(guardada);
+    }
+
+    // 3) Ver citas del paciente
+    @GetMapping("/citas")
+    public ResponseEntity<?> verCitasPaciente(@RequestParam String email) {
+        Optional<Usuario> u = authService.buscarUsuarioPorEmail(email);
+        if (u.isEmpty() || !"PACIENTE".equals(u.get().getRol())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Acceso denegado: Solo PACIENTES pueden ver sus citas.");
+        }
+        List<CitaMedica> citas = citaMedicaService.listarCitasPorPaciente(u.get().getId());
+        return ResponseEntity.ok(citas);
+    }
+
+    // 4) Cancelar cita y liberar disponibilidad
+    @DeleteMapping("/citas/{idCita}")
+    public ResponseEntity<?> cancelarCita(
+            @RequestParam String email,
+            @PathVariable Long idCita
+    ) {
+        // Validar paciente
+        Optional<Usuario> u = authService.buscarUsuarioPorEmail(email);
+        if (u.isEmpty() || !"PACIENTE".equals(u.get().getRol())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Acceso denegado: Solo PACIENTES pueden cancelar citas.");
+        }
+
+        // Recuperar cita antes de borrarla
+        Optional<CitaMedica> opt = citaMedicaService.buscarPorId(idCita);
+        if (opt.isEmpty() || !opt.get().getPaciente().getId().equals(u.get().getId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Cita no encontrada o no pertenece a este paciente.");
+        }
+        CitaMedica cita = opt.get();
+
+        // Borrar cita
+        citaMedicaService.cancelarCita(idCita, u.get().getId());
+
+        // Volver a crear franja EXACTA usando los setters correctos
+        DisponibilidadMedico disp = new DisponibilidadMedico();
+        disp.setMedico(cita.getMedico());
+        // ⚠️ AQUÍ: usa los nombres de campo de tu entidad
+        disp.setFechaHoraInicio(cita.getFechaHora());
+        disp.setFechaHoraFin(cita.getFechaHora().plusMinutes(30)); // o la duración real
+        disponibilidadMedicoService.crearDisponibilidad(disp);
+
+        return ResponseEntity.ok("Cita cancelada y disponibilidad liberada correctamente.");
+    }
+
+    // 5) Ver historial médico
+    @GetMapping("/historial")
+    public ResponseEntity<?> verHistorialMedico(@RequestParam String email) {
+        Optional<Usuario> u = authService.buscarUsuarioPorEmail(email);
+        if (u.isEmpty() || !"PACIENTE".equals(u.get().getRol())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Acceso denegado: Solo PACIENTES pueden ver su historial.");
+        }
+        return ResponseEntity.ok(
+                historialMedicoService.verHistorialPaciente(u.get().getId())
+        );
+    }
+
+    // 6) Ver disponibilidades
+    @GetMapping("/disponibilidad")
+    public ResponseEntity<?> verDisponibilidades(@RequestParam Long medicoId) {
+        return ResponseEntity.ok(
+                disponibilidadMedicoService.listarDisponibilidadesPorMedico(medicoId)
+        );
+    }
+}
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\controller EXISTE "RecetaMedicaController":
+package com.example.backend.controller;
+
+import com.example.backend.dto.RecetaMedicaDTO;
+import com.example.backend.model.RecetaMedica;
+import com.example.backend.model.Usuario;
+import com.example.backend.service.AuthService;
+import com.example.backend.service.RecetaMedicaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/recetas")
+public class RecetaMedicaController {
+
+    @Autowired private RecetaMedicaService recetaMedicaService;
+    @Autowired private AuthService authService;
+
+    /** 1) MÉDICO crea receta **/
+    @PostMapping
+    public ResponseEntity<?> crearReceta(
+            @RequestParam String email,
+            @RequestBody RecetaMedicaDTO dto
+    ) {
+        Optional<Usuario> u = authService.buscarUsuarioPorEmail(email);
+        if (u.isEmpty() || !"MEDICO".equals(u.get().getRol())) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("Solo MÉDICOS pueden registrar recetas.");
+        }
+        RecetaMedica r = recetaMedicaService.registrarReceta(dto, u.get().getId());
+        return ResponseEntity.ok(r);
+    }
+
+    /** 2) MÉDICO o INVENTARIO listan recetas **/
+    @GetMapping
+    public ResponseEntity<?> listarRecetas(@RequestParam String email) {
+        Optional<Usuario> u = authService.buscarUsuarioPorEmail(email);
+        if (u.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado.");
+        }
+        String rol = u.get().getRol();
+        List<RecetaMedica> recetas;
+        if ("MEDICO".equals(rol)) {
+            recetas = recetaMedicaService.listarRecetasPorMedico(u.get().getId());
+        } else if ("INVENTARIO".equals(rol)) {
+            recetas = recetaMedicaService.listarRecetasPorInventario();
+        } else {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("Solo MÉDICOS o INVENTARIO pueden ver recetas.");
+        }
+        return ResponseEntity.ok(recetas);
+    }
+
+    /** 3) INVENTARIO confirma entrega y elimina receta **/
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarReceta(
+            @RequestParam String email,
+            @PathVariable Long id
+    ) {
+        Optional<Usuario> u = authService.buscarUsuarioPorEmail(email);
+        if (u.isEmpty() || !"INVENTARIO".equals(u.get().getRol())) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("Solo INVENTARIO puede confirmar entrega de recetas.");
+        }
+        boolean ok = recetaMedicaService.eliminarRecetaPorId(id);
+        if (ok) {
+            return ResponseEntity.ok("Receta entregada y eliminada correctamente.");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Receta no encontrada.");
+        }
+    }
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\controller EXISTE "StockMedicamentoController":
+package com.example.backend.controller;
+
+import com.example.backend.model.StockMedicamento;
+import com.example.backend.service.StockMedicamentoService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/stock")
+public class StockMedicamentoController {
+
+    @Autowired
+    private StockMedicamentoService stockMedicamentoService;
+
+    // Crear o actualizar stock
+    @PostMapping
+    public ResponseEntity<StockMedicamento> crearOActualizarStock(@RequestBody StockMedicamento stockMedicamento) {
+        StockMedicamento nuevo = stockMedicamentoService.actualizarStock(stockMedicamento);
+        return ResponseEntity.ok(nuevo);
+    }
+
+    // Listar stock
+    @GetMapping
+    public ResponseEntity<List<StockMedicamento>> listarStock() {
+        return ResponseEntity.ok(stockMedicamentoService.listarStock());
+    }
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\controller EXISTE "UsuarioController":
+// backend/src/main/java/com/example/backend/controller/UsuarioController.java
+package com.example.backend.controller;
+
+import com.example.backend.model.Usuario;
+import com.example.backend.service.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * Endpoints CRUD para Usuario.
+ */
+@RestController
+@RequestMapping("/api/usuarios")
+public class UsuarioController {
+
+    @Autowired
+    private UsuarioService usuarioService;
+
+    /** GET  /api/usuarios → lista todos los usuarios */
+    @GetMapping
+    public ResponseEntity<List<Usuario>> listarUsuarios() {
+        List<Usuario> todos = usuarioService.listarUsuarios();
+        return ResponseEntity.ok(todos);
+    }
+
+    /** GET  /api/usuarios/{id} → busca usuario por ID */
+    @GetMapping("/{id}")
+    public ResponseEntity<Usuario> obtenerUno(@PathVariable Long id) {
+        return usuarioService.buscarUsuarioPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** POST /api/usuarios → crea un nuevo usuario */
+    @PostMapping
+    public ResponseEntity<Usuario> crearUsuario(@RequestBody Usuario usuario) {
+        Usuario creado = usuarioService.crearUsuario(usuario);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(creado);
+    }
+}
+
+
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\dto EXISTE "AgendarCitaRequest":
+package com.example.backend.dto;
+
+/**
+ * DTO para agendar cita:
+ * - medicoId: id del médico
+ * - fechaHoraInicio: ISO string, ej. "2025-05-02T10:00:00"
+ * - motivo: motivo de la consulta
+ */
+public class AgendarCitaRequest {
+
+    private Long medicoId;
+    private String fechaHoraInicio;
+    private String motivo;
+
+    public Long getMedicoId() {
+        return medicoId;
+    }
+
+    public void setMedicoId(Long medicoId) {
+        this.medicoId = medicoId;
+    }
+
+    public String getFechaHoraInicio() {
+        return fechaHoraInicio;
+    }
+
+    public void setFechaHoraInicio(String fechaHoraInicio) {
+        this.fechaHoraInicio = fechaHoraInicio;
+    }
+
+    public String getMotivo() {
+        return motivo;
+    }
+
+    public void setMotivo(String motivo) {
+        this.motivo = motivo;
+    }
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\dto EXISTE "HistorialMedicoDTO":
+package com.example.backend.dto;
+
+public class HistorialMedicoDTO {
+
+    private String diagnostico;
+    private Long pacienteId;
+
+    // Constructor vacío (necesario para Jackson)
+    public HistorialMedicoDTO() {}
+
+    // Constructor que usamos en el controller
+    public HistorialMedicoDTO(String diagnostico, Long pacienteId) {
+        this.diagnostico = diagnostico;
+        this.pacienteId = pacienteId;
+    }
+
+    public String getDiagnostico() {
+        return diagnostico;
+    }
+
+    public void setDiagnostico(String diagnostico) {
+        this.diagnostico = diagnostico;
+    }
+
+    public Long getPacienteId() {
+        return pacienteId;
+    }
+
+    public void setPacienteId(Long pacienteId) {
+        this.pacienteId = pacienteId;
+    }
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\dto EXISTE "LoginRequest":
+package com.example.backend.dto;
+
+import lombok.Data;
+
+@Data
+public class LoginRequest {
+    private String email;
+    private String password;
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\dto EXISTE "MedicamentoStockDTO":
+// src/main/java/com/example/backend/dto/MedicamentoStockDTO.java
+package com.example.backend.dto;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+@Data
+public class MedicamentoStockDTO {
+    @NotBlank(message = "El nombre no puede estar vacío")
+    private String nombre;
+
+    private String descripcion;
+
+    @Min(value = 1, message = "La cantidad debe ser al menos 1")
+    private int cantidadDisponible;
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\dto EXISTE "RecetaMedicaDTO":
+package com.example.backend.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class RecetaMedicaDTO {
+    private String nombreMedicamento;
+    private String descripcion;
+    private Long pacienteId;
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\dto EXISTE "RegistrarHistorialDTO":
+package com.example.backend.dto;
+
+public class RegistrarHistorialDTO {
+
+    private String emailMedico;
+    private String diagnostico;
+    private Long pacienteId;
+
+    public String getEmailMedico() {
+        return emailMedico;
+    }
+
+    public void setEmailMedico(String emailMedico) {
+        this.emailMedico = emailMedico;
+    }
+
+    public String getDiagnostico() {
+        return diagnostico;
+    }
+
+    public void setDiagnostico(String diagnostico) {
+        this.diagnostico = diagnostico;
+    }
+
+    public Long getPacienteId() {
+        return pacienteId;
+    }
+
+    public void setPacienteId(Long pacienteId) {
+        this.pacienteId = pacienteId;
+    }
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\dto EXISTE "RegistrarMedicamentoDTO":
+package com.example.backend.dto;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+@Data
+public class RegistrarMedicamentoDTO {
+    @NotBlank(message = "El nombre no puede estar vacío")
+    private String nombre;
+
+    private String descripcion;
+
+    @NotNull(message = "La cantidad es obligatoria")
+    @Min(value = 1, message = "La cantidad debe ser al menos 1")
+    private Integer cantidadDisponible;
+}
+
+
+
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\exception EXISTE "GlobalExceptionHandler":
+package com.example.backend.exception;
+
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    // Captura errores de validaciones de @Valid en @RequestBody
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException ex) {
+        Map<String, String> errores = new HashMap<>();
+
+        ex.getBindingResult().getFieldErrors().forEach(error -> {
+            errores.put(error.getField(), error.getDefaultMessage());
+        });
+
+        return new ResponseEntity<>(errores, HttpStatus.BAD_REQUEST);
+    }
+
+    // Captura errores de validaciones de persistencia (cuando Hibernate lanza ConstraintViolationException)
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, String>> handleConstraintViolation(ConstraintViolationException ex) {
+        Map<String, String> errores = new HashMap<>();
+
+        ex.getConstraintViolations().forEach(error -> {
+            errores.put(error.getPropertyPath().toString(), error.getMessage());
+        });
+
+        return new ResponseEntity<>(errores, HttpStatus.BAD_REQUEST);
+    }
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\model EXISTE "CitaMedica":
+package com.example.backend.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+import java.time.LocalDateTime;
+
+@Entity
+@Data
+@Table(name = "citas_medicas")
+public class CitaMedica {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull(message = "La fecha de la cita no puede ser nula")
+    @Future(message = "La fecha de la cita debe ser futura")
+    private LocalDateTime fechaHora;
+
+    @NotBlank(message = "El motivo de la cita no puede estar vacío")
+    private String motivo;
+
+    private String estado = "PENDIENTE"; // 🔵 NUEVO: Campo para estado de la cita
+
+    @ManyToOne
+    @JoinColumn(name = "paciente_id")
+    @NotNull(message = "El paciente es obligatorio")
+    private Usuario paciente;
+
+    @ManyToOne
+    @JoinColumn(name = "medico_id")
+    @NotNull(message = "El médico es obligatorio")
+    private Usuario medico;
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\model EXISTE "DisponibilidadMedico":
+package com.example.backend.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Data
+@Table(name = "disponibilidades_medico")
+public class DisponibilidadMedico {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private LocalDateTime fechaHoraInicio; // NUEVO
+
+    private LocalDateTime fechaHoraFin; // NUEVO
+
+    private boolean disponible = true;
+
+    @ManyToOne
+    @JoinColumn(name = "medico_id")
+    private Usuario medico;
+
+    public void setFechaInicio(LocalDateTime fechaHora) {
+
+    }
+
+    public void setFechaFin(LocalDateTime localDateTime) {
+
+    }
+}
+
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\model EXISTE "HistorialMedico":
+package com.example.backend.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+@Entity
+@Data
+@Table(name = "historial_medico")
+public class HistorialMedico {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String diagnostico;
+
+    @ManyToOne
+    @JoinColumn(name = "paciente_id")
+    private com.example.backend.model.Usuario paciente;
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\model EXISTE "Medicamento":
+package com.example.backend.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+@Entity
+@Data
+@Table(name = "medicamentos")
+public class Medicamento {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "El nombre del medicamento no puede estar vacío")
+    private String nombre;
+
+    private String descripcion;
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\model EXISTE "RecetaMedica":
+package com.example.backend.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+import java.time.LocalDate;
+
+@Entity
+@Data
+@Table(name = "recetas_medicas")
+public class RecetaMedica {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "La descripción no puede estar vacía")
+    private String descripcion;
+
+    @NotNull(message = "La fecha de emisión es obligatoria")
+    private LocalDate fechaEmision;
+
+    @ManyToOne
+    @JoinColumn(name = "paciente_id")
+    @NotNull(message = "El paciente es obligatorio")
+    private Usuario paciente;
+
+    @ManyToOne
+    @JoinColumn(name = "medico_id")
+    @NotNull(message = "El médico es obligatorio")
+    private Usuario medico;
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\model EXISTE "StockMedicamento":
+package com.example.backend.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+@Entity
+@Data
+@Table(name = "stock_medicamentos")
+public class StockMedicamento {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull(message = "La cantidad disponible es obligatoria")
+    @Min(value = 0, message = "La cantidad disponible no puede ser negativa")
+    private Integer cantidadDisponible;
+
+    @OneToOne
+    @JoinColumn(name = "medicamento_id")
+    @NotNull(message = "El medicamento asociado es obligatorio")
+    private Medicamento medicamento;
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\model EXISTE "Usuario":
+package com.example.backend.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+@Entity
+@Data
+@Table(name = "usuarios")
+public class Usuario {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "El nombre no puede estar vacío")
+    private String nombre;
+
+    @Email(message = "Debe ser un email válido")
+    @NotBlank(message = "El email no puede estar vacío")
+    private String email;
+
+    @NotBlank(message = "La contraseña no puede estar vacía")
+    private String password;
+
+    @NotBlank(message = "El rol no puede estar vacío")
+    private String rol; // PACIENTE / MEDICO / ADMINISTRATIVO / INVENTARIO
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\repository EXISTE "CitaMedicaRepository":
+package com.example.backend.repository;
+
+import com.example.backend.model.CitaMedica;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface CitaMedicaRepository extends JpaRepository<CitaMedica, Long> {
+
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\repository EXISTE "DisponibilidadMedicoRepository":
+// backend/src/main/java/com/example/backend/repository/DisponibilidadMedicoRepository.java
+package com.example.backend.repository;
+
+import com.example.backend.model.DisponibilidadMedico;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface DisponibilidadMedicoRepository extends JpaRepository<DisponibilidadMedico, Long> {
+
+    List<DisponibilidadMedico> findByMedicoIdAndDisponibleTrue(Long medicoId);
+}
+
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\repository EXISTE "HistorialMedicoRepository":
+package com.example.backend.repository;
+
+import com.example.backend.model.HistorialMedico;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface HistorialMedicoRepository extends JpaRepository<HistorialMedico, Long> {
+
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\repository EXISTE "MedicamentoRepository":
+package com.example.backend.repository;
+
+import com.example.backend.model.Medicamento;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface MedicamentoRepository extends JpaRepository<Medicamento, Long> {
+
+    Optional<Medicamento> findByNombre(String nombreMedicamento);
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\repository EXISTE "RecetaMedicaRepository":
+package com.example.backend.repository;
+
+import com.example.backend.model.RecetaMedica;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface RecetaMedicaRepository extends JpaRepository<RecetaMedica, Long> {
+
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\repository EXISTE "StockMedicamentoRepository":
+package com.example.backend.repository;
+
+import com.example.backend.model.Medicamento;
+import com.example.backend.model.StockMedicamento;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface StockMedicamentoRepository extends JpaRepository<StockMedicamento, Long> {
+    Optional<StockMedicamento> findByMedicamento(Medicamento medicamento);
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\repository EXISTE "UsuarioRepository":
+package com.example.backend.repository;
+
+import com.example.backend.model.Usuario;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service EXISTE "AuthService":
+package com.example.backend.service;
+
+import com.example.backend.model.Usuario;
+import com.example.backend.repository.UsuarioRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class AuthService {
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    // Método para autenticar usuario por email y password
+    public Optional<Usuario> autenticarUsuario(String email, String password) {
+        return usuarioRepository.findAll().stream()
+                .filter(u -> u.getEmail().equals(email) && u.getPassword().equals(password))
+                .findFirst();
+    }
+
+    // Método para buscar usuario solo por email (sin password)
+    public Optional<Usuario> buscarUsuarioPorEmail(String email) {
+        return usuarioRepository.findAll().stream()
+                .filter(u -> u.getEmail().equals(email))
+                .findFirst();
+    }
+
+    // Método para listar todos los usuarios (opcional si quieres agregar funciones administrativas después)
+    public List<Usuario> listarUsuarios() {
+        return usuarioRepository.findAll();
+    }
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service EXISTE "CitaMedicaService":
+package com.example.backend.service;
+
+import com.example.backend.model.CitaMedica;
+import java.util.List;
+import java.util.Optional;
+
+public interface CitaMedicaService {
+
+    CitaMedica agendarCita(CitaMedica citaMedica);
+
+    List<CitaMedica> listarCitas();
+
+    List<CitaMedica> listarCitasPorPaciente(Long pacienteId);
+
+    boolean cancelarCita(Long idCita, Long pacienteId);
+
+    List<CitaMedica> listarCitasPorMedico(Long medicoId);
+
+    // 🔵 FINALIZAR cita médico
+    boolean finalizarCita(Long idCita, Long medicoId);
+
+    /**
+     * 🔵 BUSCAR cita por su ID, devuelve Optional<CitaMedica>
+     */
+    Optional<CitaMedica> buscarPorId(Long idCita);
+}
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service EXISTE "DisponibilidadMedicoService":
+// backend/src/main/java/com/example/backend/service/DisponibilidadMedicoService.java
+package com.example.backend.service;
+
+import com.example.backend.model.DisponibilidadMedico;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface DisponibilidadMedicoService {
+
+    /** Guarda una nueva franja disponible (o la re‐genera). */
+    DisponibilidadMedico registrarDisponibilidad(DisponibilidadMedico disponibilidad);
+
+    /** Lista solo las franjas con disponible=true. */
+    List<DisponibilidadMedico> listarDisponibilidadesPorMedico(Long medicoId);
+
+    /** Consulta una franja por su ID. */
+    Optional<DisponibilidadMedico> obtenerDisponibilidadPorId(Long id);
+
+    /** Marca la franja como NO disponible (cuando se agenda). */
+    void marcarNoDisponible(Long id);
+
+    /** Vuelve a marcar una franja existente como disponible. */
+    void crearDisponibilidad(DisponibilidadMedico disponibilidad);
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service EXISTE "HistorialMedicoService":
+package com.example.backend.service;
+
+import com.example.backend.model.HistorialMedico;
+import com.example.backend.dto.HistorialMedicoDTO;
+
+import java.util.List;
+
+public interface HistorialMedicoService {
+
+    List<HistorialMedico> verHistorialPaciente(Long pacienteId);
+
+    // 🔵 NUEVO: Método para registrar un historial
+    HistorialMedico registrarHistorial(HistorialMedicoDTO historialMedicoDTO);
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service EXISTE "MedicamentoService":
+// src/main/java/com/example/backend/service/MedicamentoService.java
+package com.example.backend.service;
+
+import com.example.backend.dto.MedicamentoStockDTO;
+import com.example.backend.model.Medicamento;
+import com.example.backend.model.StockMedicamento;
+
+import java.util.List;
+
+public interface MedicamentoService {
+    Medicamento registrarMedicamento(Medicamento m);
+    List<Medicamento> listarMedicamentos();
+    // 🔵 NUEVO:
+    StockMedicamento crearMedicamentoConStock(MedicamentoStockDTO dto);
+}
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service EXISTE "RecetaMedicaService":
+package com.example.backend.service;
+
+import com.example.backend.model.RecetaMedica;
+import com.example.backend.dto.RecetaMedicaDTO;
+
+import java.util.List;
+
+public interface RecetaMedicaService {
+
+    // Registro “crudo”
+    RecetaMedica registrarReceta(RecetaMedica recetaMedica);
+
+    // Listar TODO (p.ej. para inventario)
+    List<RecetaMedica> listarRecetas();
+
+    // Registro vía DTO + stock
+    RecetaMedica registrarReceta(RecetaMedicaDTO recetaMedicaDTO, Long medicoId);
+
+    // Eliminar receta al confirmar entrega
+    boolean eliminarRecetaPorId(Long id);
+
+    // 🔵 MÉDICO ve SOLO sus propias recetas
+    List<RecetaMedica> listarRecetasPorMedico(Long medicoId);
+
+    // 🔵 INVENTARIO ve TODAS las recetas pendientes
+    List<RecetaMedica> listarRecetasPorInventario();
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service EXISTE "StockMedicamentoService":
+package com.example.backend.service;
+
+import com.example.backend.model.StockMedicamento;
+import java.util.List;
+
+public interface StockMedicamentoService {
+    StockMedicamento actualizarStock(StockMedicamento stock);
+    List<StockMedicamento> listarStock();
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service EXISTE "UsuarioService":
+// backend/src/main/java/com/example/backend/service/UsuarioService.java
+package com.example.backend.service;
+
+import com.example.backend.model.Usuario;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Operaciones de negocio sobre Usuarios.
+ */
+public interface UsuarioService {
+
+    /**
+     * Busca un usuario por su ID.
+     */
+    Optional<Usuario> buscarUsuarioPorId(Long id);
+
+    /**
+     * Devuelve todos los usuarios.
+     */
+    List<Usuario> listarUsuarios();
+
+    /**
+     * Crea un nuevo usuario (o actualiza si ya existe ID).
+     */
+    Usuario crearUsuario(Usuario usuario);
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service\impl EXISTE "CitaMedicaServiceImpl":
+package com.example.backend.service.impl;
+
+import com.example.backend.model.CitaMedica;
+import com.example.backend.repository.CitaMedicaRepository;
+import com.example.backend.service.CitaMedicaService;
+import com.example.backend.service.DisponibilidadMedicoService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class CitaMedicaServiceImpl implements CitaMedicaService {
+
+    @Autowired
+    private CitaMedicaRepository citaMedicaRepository;
+
+    @Autowired
+    private DisponibilidadMedicoService disponibilidadMedicoService;
+
+    @Override
+    public CitaMedica agendarCita(CitaMedica citaMedica) {
+        CitaMedica nuevaCita = citaMedicaRepository.save(citaMedica);
+
+        disponibilidadMedicoService.listarDisponibilidadesPorMedico(citaMedica.getMedico().getId())
+                .stream()
+                .filter(d ->
+                        d.isDisponible() &&
+                                !citaMedica.getFechaHora().isBefore(d.getFechaHoraInicio()) &&
+                                !citaMedica.getFechaHora().isAfter(d.getFechaHoraFin())
+                )
+                .forEach(d -> disponibilidadMedicoService.marcarNoDisponible(d.getId()));
+
+        return nuevaCita;
+    }
+
+    @Override
+    public List<CitaMedica> listarCitas() {
+        return citaMedicaRepository.findAll();
+    }
+
+    @Override
+    public List<CitaMedica> listarCitasPorPaciente(Long pacienteId) {
+        return citaMedicaRepository.findAll().stream()
+                .filter(c -> c.getPaciente().getId().equals(pacienteId))
+                .toList();
+    }
+
+    @Override
+    public boolean cancelarCita(Long idCita, Long pacienteId) {
+        Optional<CitaMedica> citaOptional = citaMedicaRepository.findById(idCita);
+        if (citaOptional.isPresent() && citaOptional.get().getPaciente().getId().equals(pacienteId)) {
+            citaMedicaRepository.deleteById(idCita);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public List<CitaMedica> listarCitasPorMedico(Long medicoId) {
+        return citaMedicaRepository.findAll().stream()
+                .filter(c -> c.getMedico() != null && c.getMedico().getId().equals(medicoId))
+                .toList();
+    }
+
+    @Override
+    public boolean finalizarCita(Long idCita, Long medicoId) {
+        Optional<CitaMedica> citaOptional = citaMedicaRepository.findById(idCita);
+        if (citaOptional.isPresent() && citaOptional.get().getMedico().getId().equals(medicoId)) {
+            CitaMedica c = citaOptional.get();
+            c.setEstado("FINALIZADA");
+            citaMedicaRepository.save(c);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public Optional<CitaMedica> buscarPorId(Long idCita) {
+        return citaMedicaRepository.findById(idCita);
+    }
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service\impl EXISTE "DisponibilidadMedicoServiceImpl":
+// backend/src/main/java/com/example/backend/service/impl/DisponibilidadMedicoServiceImpl.java
+package com.example.backend.service.impl;
+
+import com.example.backend.model.DisponibilidadMedico;
+import com.example.backend.repository.DisponibilidadMedicoRepository;
+import com.example.backend.service.DisponibilidadMedicoService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class DisponibilidadMedicoServiceImpl implements DisponibilidadMedicoService {
+
+    @Autowired
+    private DisponibilidadMedicoRepository disponibilidadMedicoRepository;
+
+    @Override
+    public DisponibilidadMedico registrarDisponibilidad(DisponibilidadMedico disponibilidad) {
+        disponibilidad.setDisponible(true);
+        return disponibilidadMedicoRepository.save(disponibilidad);
+    }
+
+    @Override
+    public List<DisponibilidadMedico> listarDisponibilidadesPorMedico(Long medicoId) {
+        return disponibilidadMedicoRepository.findByMedicoIdAndDisponibleTrue(medicoId);
+    }
+
+    @Override
+    public Optional<DisponibilidadMedico> obtenerDisponibilidadPorId(Long id) {
+        return disponibilidadMedicoRepository.findById(id);
+    }
+
+    @Override
+    public void marcarNoDisponible(Long id) {
+        disponibilidadMedicoRepository.findById(id).ifPresent(d -> {
+            d.setDisponible(false);
+            disponibilidadMedicoRepository.save(d);
+        });
+    }
+
+    @Override
+    public void crearDisponibilidad(DisponibilidadMedico disp) {
+        // re-habilita la misma franja cancelada
+        disp.setDisponible(true);
+        disponibilidadMedicoRepository.save(disp);
+    }
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service\impl EXISTE "HistorialMedicoServiceImpl":
+package com.example.backend.service.impl;
+
+import com.example.backend.model.HistorialMedico;
+import com.example.backend.model.Usuario;
+import com.example.backend.repository.HistorialMedicoRepository;
+import com.example.backend.repository.UsuarioRepository;
+import com.example.backend.service.HistorialMedicoService;
+import com.example.backend.dto.HistorialMedicoDTO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class HistorialMedicoServiceImpl implements HistorialMedicoService {
+
+    @Autowired
+    private HistorialMedicoRepository historialMedicoRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Override
+    public List<HistorialMedico> verHistorialPaciente(Long pacienteId) {
+        return historialMedicoRepository.findAll().stream()
+                .filter(historial -> historial.getPaciente().getId().equals(pacienteId))
+                .toList();
+    }
+
+    @Override
+    public HistorialMedico registrarHistorial(HistorialMedicoDTO historialMedicoDTO) {
+        Usuario paciente = usuarioRepository.findById(historialMedicoDTO.getPacienteId())
+                .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
+
+        HistorialMedico historial = new HistorialMedico();
+        historial.setDiagnostico(historialMedicoDTO.getDiagnostico());
+        historial.setPaciente(paciente);
+
+        return historialMedicoRepository.save(historial);
+    }
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service\impl EXISTE "MedicamentoServiceImpl":
+// src/main/java/com/example/backend/service/impl/MedicamentoServiceImpl.java
+package com.example.backend.service.impl;
+
+import com.example.backend.dto.MedicamentoStockDTO;
+import com.example.backend.model.Medicamento;
+import com.example.backend.model.StockMedicamento;
+import com.example.backend.repository.MedicamentoRepository;
+import com.example.backend.repository.StockMedicamentoRepository;
+import com.example.backend.service.MedicamentoService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class MedicamentoServiceImpl implements MedicamentoService {
+
+    @Autowired
+    private MedicamentoRepository medicamentoRepository;
+
+    @Autowired
+    private StockMedicamentoRepository stockRepository;
+
+    @Override
+    public Medicamento registrarMedicamento(Medicamento medicamento) {
+        return medicamentoRepository.save(medicamento);
+    }
+
+    @Override
+    public List<Medicamento> listarMedicamentos() {
+        return medicamentoRepository.findAll();
+    }
+
+    @Override
+    public StockMedicamento crearMedicamentoConStock(MedicamentoStockDTO dto) {
+        // 1) Crear medicamento
+        Medicamento med = new Medicamento();
+        med.setNombre(dto.getNombre());
+        med.setDescripcion(dto.getDescripcion());
+        medicamentoRepository.save(med);
+
+        // 2) Crear stock asociado
+        StockMedicamento stock = new StockMedicamento();
+        stock.setMedicamento(med);
+        stock.setCantidadDisponible(dto.getCantidadDisponible());
+        return stockRepository.save(stock);
+    }
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service\impl EXISTE "RecetaMedicaServiceImpl":
+package com.example.backend.service.impl;
+
+import com.example.backend.dto.RecetaMedicaDTO;
+import com.example.backend.model.Medicamento;
+import com.example.backend.model.RecetaMedica;
+import com.example.backend.model.StockMedicamento;
+import com.example.backend.model.Usuario;
+import com.example.backend.repository.MedicamentoRepository;
+import com.example.backend.repository.RecetaMedicaRepository;
+import com.example.backend.repository.StockMedicamentoRepository;
+import com.example.backend.repository.UsuarioRepository;
+import com.example.backend.service.RecetaMedicaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Service
+public class RecetaMedicaServiceImpl implements RecetaMedicaService {
+
+    @Autowired private RecetaMedicaRepository recetaMedicaRepository;
+    @Autowired private MedicamentoRepository medicamentoRepository;
+    @Autowired private StockMedicamentoRepository stockMedicamentoRepository;
+    @Autowired private UsuarioRepository usuarioRepository;
+
+    @Override
+    public RecetaMedica registrarReceta(RecetaMedica recetaMedica) {
+        return recetaMedicaRepository.save(recetaMedica);
+    }
+
+    @Override
+    public List<RecetaMedica> listarRecetas() {
+        return recetaMedicaRepository.findAll();
+    }
+
+    @Override
+    public RecetaMedica registrarReceta(RecetaMedicaDTO dto, Long medicoId) {
+        Usuario paciente = usuarioRepository.findById(dto.getPacienteId())
+                .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
+
+        Medicamento medicamento = medicamentoRepository.findByNombre(dto.getNombreMedicamento())
+                .orElseGet(() -> {
+                    Medicamento m = new Medicamento();
+                    m.setNombre(dto.getNombreMedicamento());
+                    m.setDescripcion(dto.getDescripcion());
+                    medicamentoRepository.save(m);
+
+                    StockMedicamento s = new StockMedicamento();
+                    s.setMedicamento(m);
+                    s.setCantidadDisponible(10);
+                    stockMedicamentoRepository.save(s);
+                    return m;
+                });
+
+        StockMedicamento stock = stockMedicamentoRepository.findByMedicamento(medicamento)
+                .orElseThrow(() -> new RuntimeException("Stock no encontrado"));
+        if (stock.getCantidadDisponible() <= 0) {
+            throw new RuntimeException("Sin stock de " + medicamento.getNombre());
+        }
+        stock.setCantidadDisponible(stock.getCantidadDisponible() - 1);
+        stockMedicamentoRepository.save(stock);
+
+        RecetaMedica receta = new RecetaMedica();
+        receta.setDescripcion(dto.getDescripcion());
+        receta.setFechaEmision(LocalDate.now());
+        receta.setPaciente(paciente);
+        receta.setMedico(usuarioRepository.findById(medicoId)
+                .orElseThrow(() -> new RuntimeException("Médico no encontrado")));
+
+        return recetaMedicaRepository.save(receta);
+    }
+
+    @Override
+    public boolean eliminarRecetaPorId(Long id) {
+        if (recetaMedicaRepository.existsById(id)) {
+            recetaMedicaRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public List<RecetaMedica> listarRecetasPorMedico(Long medicoId) {
+        return recetaMedicaRepository.findAll().stream()
+                .filter(r -> r.getMedico() != null && r.getMedico().getId().equals(medicoId))
+                .toList();
+    }
+
+    @Override
+    public List<RecetaMedica> listarRecetasPorInventario() {
+        return recetaMedicaRepository.findAll();
+    }
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service\impl EXISTE "StockMedicamentoServiceImpl":
+package com.example.backend.service.impl;
+
+import com.example.backend.model.StockMedicamento;
+import com.example.backend.repository.StockMedicamentoRepository;
+import com.example.backend.service.StockMedicamentoService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class StockMedicamentoServiceImpl implements StockMedicamentoService {
+
+    @Autowired
+    private StockMedicamentoRepository stockRepo;
+
+    @Override
+    public StockMedicamento actualizarStock(StockMedicamento stock) {
+        // si viene con id, actualiza; sino inserta
+        return stockRepo.save(stock);
+    }
+
+    @Override
+    public List<StockMedicamento> listarStock() {
+        return stockRepo.findAll();
+    }
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend\service\impl EXISTE "UsuarioServiceImpl":
+// backend/src/main/java/com/example/backend/service/impl/UsuarioServiceImpl.java
+package com.example.backend.service.impl;
+
+import com.example.backend.model.Usuario;
+import com.example.backend.repository.UsuarioRepository;
+import com.example.backend.service.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Implementación JPA de UsuarioService.
+ */
+@Service
+public class UsuarioServiceImpl implements UsuarioService {
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Override
+    public Optional<Usuario> buscarUsuarioPorId(Long id) {
+        return usuarioRepository.findById(id);
+    }
+
+    @Override
+    public List<Usuario> listarUsuarios() {
+        return usuarioRepository.findAll();
+    }
+
+    @Override
+    public Usuario crearUsuario(Usuario usuario) {
+        return usuarioRepository.save(usuario);
+    }
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\java\com\example\backend EXISTE "BackendApplication":
+package com.example.backend;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class BackendApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(BackendApplication.class, args);
+	}
+
+}
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\resources EXISTE "application.properties":
+# Puerto del servidor
+server.port=8081
+
+# Datos de conexión a tu base de datos PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5432/fingeso
+spring.datasource.username=postgres
+spring.datasource.password=123
+
+# Configuración de JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=create
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+
+# Tiempo de conexión máximo
+spring.datasource.hikari.connection-timeout=20000
+spring.datasource.hikari.maximum-pool-size=5
+
+spring.sql.init.mode=always
+
+spring.jpa.defer-datasource-initialization=true
+
+
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\resources EXISTE "data.sql":
+-- Insertar usuarios (4 pacientes + 4 médicos)
+INSERT INTO usuarios (id, nombre, email, password, rol) VALUES
+(1, 'Juan Pérez', 'juan.perez@example.com', '1234', 'PACIENTE'),
+(2, 'María González', 'maria.gonzalez@example.com', '1234', 'PACIENTE'),
+(3, 'Pedro López', 'pedro.lopez@example.com', '1234', 'PACIENTE'),
+(4, 'Ana Díaz', 'ana.diaz@example.com', '1234', 'PACIENTE'),
+(5, 'Dr. Rodrigo Salas', 'rodrigo.salas@example.com', 'abcd1234', 'MEDICO'),
+(6, 'Dra. Carmen Vidal', 'carmen.vidal@example.com', 'abcd1234', 'MEDICO'),
+(7, 'Dr. Luis Fernández', 'luis.fernandez@example.com', 'abcd1234', 'MEDICO'),
+(8, 'Dra. Paula Martínez', 'paula.martinez@example.com', 'abcd1234', 'MEDICO');
+
+-- Insertar disponibilidad médica (tabla correcta: disponibilidades_medico)
+INSERT INTO disponibilidades_medico (medico_id, fecha_hora_inicio, fecha_hora_fin, disponible) VALUES
+(5, '2025-05-29 09:00:00', '2025-05-29 10:00:00', true),
+(5, '2025-05-28 10:00:00', '2025-05-28 11:00:00', true),
+(6, '2025-05-27 11:00:00', '2025-05-27 12:00:00', true),
+(6, '2025-05-26 12:00:00', '2025-05-26 13:00:00', true);
+
+-- Insertar medicamentos
+INSERT INTO medicamentos (id, nombre) VALUES
+(1, 'Paracetamol 500mg'),
+(2, 'Ibuprofeno 400mg'),
+(3, 'Amoxicilina 500mg');
+
+-- Insertar stock de medicamentos
+INSERT INTO stock_medicamentos (cantidad_disponible, medicamento_id) VALUES
+(100, 1),
+(50, 2),
+(80, 3);
+
+-- tus INSERTs de usuarios…
+SELECT setval(
+  'usuarios_id_seq',
+  (SELECT COALESCE(MAX(id), 1) FROM usuarios)
+);
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\main\resources EXISTE "squema.sql":
+CREATE TABLE IF NOT EXISTS usuarios (
+  id BIGSERIAL PRIMARY KEY,
+  nombre VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  rol VARCHAR(50) NOT NULL
+);
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend\src\test\java\com\example\backend EXISTE "BackendApplicationTests":
+package com.example.backend;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class BackendApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+
+
+EN C:\Users\Admin\Desktop\FINGESO\backend EXISTE "pom.xml":
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.4.5</version>
+		<relativePath/>
+	</parent>
+
+	<groupId>com.example</groupId>
+	<artifactId>backend</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>backend</name>
+	<description>Demo project for Spring Boot</description>
+
+	<properties>
+		<java.version>17</java.version>
+	</properties>
+
+	<dependencies>
+		<!-- Core de Spring Boot -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+
+		<!-- Web - Para hacer API REST -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- Spring Data JPA - ORM -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+
+		<!-- PostgreSQL Driver -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Validaciones de datos (ej: @NotNull, @Email) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<!-- Lombok - para evitar escribir Getters/Setters manualmente -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Testing -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
+
+
+TODAS ESTAS SON LOS CODIGOS QUE DE MI PAGINA, TAMBIEN EXISTE EN C:\Users\Admin\Desktop\FINGESO\backend UNA CARPETA LLAMADA "target", y archivos llamados ".gitattributes", ".gitignore", "HELP.md", "mvnw" y "mvnw.cmd"
+
+
+
+
+
+
