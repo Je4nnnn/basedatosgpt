@@ -61,6 +61,20 @@
 			<optional>true</optional>
 		</dependency>
 
+		<!-- Apache POI - para leer/subir archivos Excel (.xlsx) -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.3</version>
+		</dependency>
+
+		<!-- Opcional: Commons FileUpload si deseas más control sobre multipart -->
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.4</version>
+		</dependency>
+
 		<!-- Testing -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

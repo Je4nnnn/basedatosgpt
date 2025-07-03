@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/citas")
-@CrossOrigin(origins = "*")
+//@CrossOrigin(origins = "*")
 public class CitaMedicaController {
 
     @Autowired

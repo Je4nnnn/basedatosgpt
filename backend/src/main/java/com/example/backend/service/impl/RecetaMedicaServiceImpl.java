@@ -10,6 +10,7 @@ import com.example.backend.repository.RecetaMedicaRepository;
 import com.example.backend.repository.StockMedicamentoRepository;
 import com.example.backend.repository.UsuarioRepository;
 import com.example.backend.service.RecetaMedicaService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,35 +26,30 @@ public class RecetaMedicaServiceImpl implements RecetaMedicaService {
     @Autowired private UsuarioRepository usuarioRepository;
 
     @Override
-    public RecetaMedica registrarReceta(RecetaMedica recetaMedica) {
-        return recetaMedicaRepository.save(recetaMedica);
-    }
-
-    @Override
-    public List<RecetaMedica> listarRecetas() {
-        return recetaMedicaRepository.findAll();
-    }
-
-    @Override
     public RecetaMedica registrarReceta(RecetaMedicaDTO dto, Long medicoId) {
+        // 1) Paciente
         Usuario paciente = usuarioRepository.findById(dto.getPacienteId())
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
 
-        Medicamento medicamento = medicamentoRepository.findByNombre(dto.getNombreMedicamento())
+        // 2) Medicamento: buscar o crear
+        Medicamento medicamento = medicamentoRepository
+                .findByNombre(dto.getNombreMedicamento())
                 .orElseGet(() -> {
                     Medicamento m = new Medicamento();
                     m.setNombre(dto.getNombreMedicamento());
                     m.setDescripcion(dto.getDescripcion());
-                    medicamentoRepository.save(m);
-
+                    Medicamento guardado = medicamentoRepository.save(m);
+                    // inicializar stock
                     StockMedicamento s = new StockMedicamento();
-                    s.setMedicamento(m);
+                    s.setMedicamento(guardado);
                     s.setCantidadDisponible(10);
                     stockMedicamentoRepository.save(s);
-                    return m;
+                    return guardado;
                 });
 
-        StockMedicamento stock = stockMedicamentoRepository.findByMedicamento(medicamento)
+        // 3) Descontar stock
+        StockMedicamento stock = stockMedicamentoRepository
+                .findByMedicamento(medicamento)
                 .orElseThrow(() -> new RuntimeException("Stock no encontrado"));
         if (stock.getCantidadDisponible() <= 0) {
             throw new RuntimeException("Sin stock de " + medicamento.getNombre());
@@ -61,6 +57,7 @@ public class RecetaMedicaServiceImpl implements RecetaMedicaService {
         stock.setCantidadDisponible(stock.getCantidadDisponible() - 1);
         stockMedicamentoRepository.save(stock);
 
+        // 4) Crear y guardar receta
         RecetaMedica receta = new RecetaMedica();
         receta.setDescripcion(dto.getDescripcion());
         receta.setFechaEmision(LocalDate.now());
@@ -69,6 +66,16 @@ public class RecetaMedicaServiceImpl implements RecetaMedicaService {
                 .orElseThrow(() -> new RuntimeException("Médico no encontrado")));
 
         return recetaMedicaRepository.save(receta);
+    }
+
+    @Override
+    public RecetaMedica registrarReceta(RecetaMedica recetaMedica) {
+        return recetaMedicaRepository.save(recetaMedica);
+    }
+
+    @Override
+    public List<RecetaMedica> listarRecetas() {
+        return recetaMedicaRepository.findAll();
     }
 
     @Override

@@ -1,4 +1,3 @@
-// src/main/java/com/example/backend/service/impl/MedicamentoServiceImpl.java
 package com.example.backend.service.impl;
 
 import com.example.backend.dto.MedicamentoStockDTO;
@@ -11,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class MedicamentoServiceImpl implements MedicamentoService {
@@ -33,16 +33,19 @@ public class MedicamentoServiceImpl implements MedicamentoService {
 
     @Override
     public StockMedicamento crearMedicamentoConStock(MedicamentoStockDTO dto) {
-        // 1) Crear medicamento
         Medicamento med = new Medicamento();
         med.setNombre(dto.getNombre());
         med.setDescripcion(dto.getDescripcion());
         medicamentoRepository.save(med);
 
-        // 2) Crear stock asociado
         StockMedicamento stock = new StockMedicamento();
         stock.setMedicamento(med);
         stock.setCantidadDisponible(dto.getCantidadDisponible());
         return stockRepository.save(stock);
+    }
+
+    @Override
+    public Optional<Medicamento> buscarPorNombre(String nombreMedicamento) {
+        return medicamentoRepository.findByNombre(nombreMedicamento);
     }
 }

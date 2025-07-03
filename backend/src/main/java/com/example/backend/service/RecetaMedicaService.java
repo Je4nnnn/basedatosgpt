@@ -7,21 +7,21 @@ import java.util.List;
 
 public interface RecetaMedicaService {
 
-    // Registro “crudo”
+    /** Registro “crudo” sin DTO */
     RecetaMedica registrarReceta(RecetaMedica recetaMedica);
 
-    // Listar TODO (p.ej. para inventario)
+    /** Listar todas las recetas */
     List<RecetaMedica> listarRecetas();
 
-    // Registro vía DTO + stock
+    /** Registro de receta vía DTO y asociada a un médico */
     RecetaMedica registrarReceta(RecetaMedicaDTO recetaMedicaDTO, Long medicoId);
 
-    // Eliminar receta al confirmar entrega
+    /** Elimina una receta por su ID */
     boolean eliminarRecetaPorId(Long id);
 
-    // 🔵 MÉDICO ve SOLO sus propias recetas
+    /** Listar recetas de un médico */
     List<RecetaMedica> listarRecetasPorMedico(Long medicoId);
 
-    // 🔵 INVENTARIO ve TODAS las recetas pendientes
+    /** Listar recetas pendientes para inventario */
     List<RecetaMedica> listarRecetasPorInventario();
 }

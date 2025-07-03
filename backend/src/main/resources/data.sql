@@ -41,10 +41,15 @@ SELECT setval(
   (SELECT COALESCE(MAX(id), 1) FROM usuarios)
 );
 
+SELECT setval(
+  'medicamentos_id_seq',
+  (SELECT MAX(id) FROM medicamentos)
+);
+
 -- Insertar citas médicas (usando la especialidad del médico)
 INSERT INTO citas_medicas (paciente_id, medico_id, fecha_hora, motivo, estado, especialidad) VALUES
-(1, 5, '2025-06-20 10:00:00', 'Consulta general', 'PENDIENTE', 'Medicina General'),
-(2, 6, '2025-06-21 11:00:00', 'Seguimiento', 'PENDIENTE', 'Cardiología'),
-(1, 7, '2025-06-15 09:00:00', 'Consulta pasada', 'FINALIZADA', 'Medicina General');
+(1, 5, '2025-08-20 10:00:00', 'Consulta general', 'PENDIENTE', 'Medicina General'),
+(2, 6, '2025-08-21 11:00:00', 'Seguimiento', 'PENDIENTE', 'Cardiología'),
+(1, 7, '2025-08-15 09:00:00', 'Consulta pasada', 'FINALIZADA', 'Medicina General');
 -- Actualizar citas existentes para tener estado por defecto
 --UPDATE citas_medicas SET estado = 'PENDIENTE' WHERE estado IS NULL OR estado = '';

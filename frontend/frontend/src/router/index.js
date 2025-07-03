@@ -21,7 +21,7 @@ import RegistrarReceta from '../views/RegistrarReceta.vue'
 import VerRecetas from '../views/VerRecetas.vue'
 import VerStock from '../views/VerStock.vue'
 import RegistrarStock from '../views/RegistrarStock.vue'
-
+import Admin from '../views/Admin.vue'
 
 import ElegirEspecialidad from '../views/ElegirEspecialidad.vue'
 import MedicosEspecialidad from '../views/MedicosEspecialidad.vue'
@@ -175,6 +175,11 @@ const routes = [
     path: '/medico/finalizar',
     name: 'FinalizarCita',
     component: () => import('../views/FinalizarCita.vue')
+  },
+  {
+      path: '/admin',
+      name: 'Admin',
+      component: Admin
   }
 ]
 

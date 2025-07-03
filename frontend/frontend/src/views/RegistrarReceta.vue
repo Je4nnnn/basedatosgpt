@@ -1,86 +1,124 @@
+<!-- frontend/src/views/RegistrarReceta.vue -->
 <template>
   <div class="registrar-receta">
     <h1>Registrar Receta</h1>
-    <div v-if="loading">Cargando datos…</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
-    <div v-else>
-      <p><strong>Paciente:</strong> {{ paciente.nombre }}</p>
+
+    <div v-if="error" class="error">{{ error }}</div>
+    <div v-if="success" class="success">{{ success }}</div>
+
+    <form @submit.prevent="submit">
       <div class="field">
-        <label>Medicamento:</label>
-        <select v-model="nombreMedicamento">
-          <option disabled value="">Seleccione un medicamento</option>
-          <option v-for="m in medicamentos" :key="m.id" :value="m.nombre">
-            {{ m.nombre }}
-          </option>
-        </select>
+        <label for="medicamento">Nombre del Medicamento:</label>
+        <input
+          id="medicamento"
+          v-model="nombreMedicamento"
+          type="text"
+          required
+        />
       </div>
+
       <div class="field">
-        <label>Descripción (observaciones):</label>
-        <textarea v-model="descripcion" placeholder="Escribe aquí…"></textarea>
+        <label for="desc">Descripción de la Receta:</label>
+        <textarea
+          id="desc"
+          v-model="descripcion"
+          required
+        ></textarea>
       </div>
-      <button @click="guardar">Guardar Receta</button>
-    </div>
+
+      <button type="submit">Registrar Receta</button>
+      <button type="button" @click="volver">Cancelar</button>
+    </form>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
 
-const route             = useRoute()
-const router            = useRouter()
-const pacienteId        = Number(route.query.pacienteId)
-const email             = localStorage.getItem('usuarioEmail')
-const medicamentos      = ref([])
-const paciente          = ref({})
+const route = useRoute()
+const router = useRouter()
+
+// 1) Tomamos pacienteId desde el query param
+const pacienteId = Number(route.query.pacienteId || 0)
+
 const nombreMedicamento = ref('')
 const descripcion       = ref('')
-const loading           = ref(true)
 const error             = ref(null)
+const success           = ref(null)
 
-async function fetchData() {
+async function submit() {
+  error.value   = null
+  success.value = null
+
+  if (!pacienteId) {
+    error.value = 'Paciente inválido'
+    return
+  }
+
   try {
-    // 1) Obtener la cita para recuperar el paciente
-    const rc = await axios.get(
-      `http://localhost:8081/api/medico/citas?email=${encodeURIComponent(email)}`
+    const email = localStorage.getItem('usuarioEmail')
+
+    // 2) Llamada POST a /api/medico/recetas con params y body
+    const body = {
+      nombreMedicamento: nombreMedicamento.value,
+      descripcion:       descripcion.value,
+      pacienteId
+    }
+
+    const resp = await axios.post(
+      '/api/medico/recetas',
+      body,
+      { params: { email } }
     )
-    const cita = rc.data.find(c => c.paciente.id === pacienteId)
-    paciente.value = cita.paciente
-    // 2) Listar todos los medicamentos
-    const rm = await axios.get('http://localhost:8081/api/medicamentos')
-    medicamentos.value = rm.data
+
+    success.value = 'Receta registrada con éxito (ID: ' + resp.data.id + ')'
+    // opcional: redirigir tras 1s
+    setTimeout(() => router.push({ name: 'VerCitasMedico' }), 1000)
   } catch (e) {
-    error.value = e.response?.data || e.message
-  } finally {
-    loading.value = false
+    // recogemos error de validación o mensaje genérico
+    const d = e.response?.data
+    error.value = d?.descripcion || d?.message || JSON.stringify(d) || e.message
   }
 }
 
-async function guardar() {
-  try {
-    await axios.post(
-      `http://localhost:8081/api/medico/recetas?email=${encodeURIComponent(email)}`,
-      {
-        nombreMedicamento: nombreMedicamento.value,
-        descripcion:       descripcion.value,
-        pacienteId:        pacienteId
-      }
-    )
-    alert('Receta registrada correctamente')
-    router.push({ name: 'VerCitasMedico' })
-  } catch (e) {
-    alert('Error al registrar receta: ' + (e.response?.data || e.message))
-  }
+function volver() {
+  router.back()
 }
-
-onMounted(fetchData)
 </script>
 
 <style scoped>
-.error { color: red; }
-.registrar-receta { max-width: 600px; margin: 2rem auto; }
-.field { margin-bottom: 1rem; }
-select, textarea { width: 100%; padding: .5rem; box-sizing: border-box; }
-button { padding: .75rem; }
+.registrar-receta {
+  max-width: 600px;
+  margin: 2rem auto;
+}
+.field {
+  margin-bottom: 1rem;
+}
+label {
+  display: block;
+  margin-bottom: .25rem;
+  font-weight: bold;
+}
+input, textarea {
+  width: 100%;
+  padding: .5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+button {
+  margin-right: .5rem;
+  padding: .5rem 1rem;
+  background-color: #3182ce;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button[type="button"] {
+  background-color: #a0aec0;
+}
+.error { color: #e53e3e; margin-bottom: 1rem; }
+.success { color: #38a169; margin-bottom: 1rem; }
 </style>
